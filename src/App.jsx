@@ -6,6 +6,9 @@ import {
   deleteOrder,
   todayStr
 } from "./supabase.js";
+import DriverView from "./DriverView";
+import WeeklyInvoice from "./WeeklyInvoice";
+import EnvBanner from "./EnvBanner";
 
 const C = {
   cream: "#FDF4E7", card: "#FFFBF4", red: "#A8321C", redDark: "#7E2413",
@@ -164,8 +167,27 @@ export default function App() {
 
   const unlocked = view === "summary" && !!staffPin;
 
+  if (view === "driver") {
+    return (
+      <>
+        <EnvBanner />
+        <DriverView onBack={() => setView("order")} />
+      </>
+    );
+  }
+
+  if (view === "invoice") {
+    return (
+      <>
+        <EnvBanner />
+        <WeeklyInvoice pin={staffPin} onBack={() => setView("summary")} />
+      </>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif", color: C.brown, display: "flex", flexDirection: "column" }}>
+      <EnvBanner />
       <div style={{ background: C.red, padding: "26px 20px 22px", textAlign: "center" }}>
         <div style={{ fontFamily: "Georgia, serif", fontSize: 30, fontWeight: 700, color: "#FFF6E8" }}>Arif Foods</div>
         <div style={{ color: "#F6CFA0", fontSize: 13, marginTop: 2, fontStyle: "italic" }}>Love yourself — Bold Flavours, Authentic Roots</div>
@@ -244,6 +266,7 @@ export default function App() {
                 <input type="date" value={summaryDate} onChange={(e) => setSummaryDate(e.target.value)} style={{ ...inp, width: "auto", margin: 0, padding: "9px 12px", fontSize: 15 }} />
                 <button onClick={() => refresh(summaryDate, staffPin)} title="Refresh" style={pillBtn(C.amber)}>↻</button>
                 <button onClick={exportExcel} disabled={orders.length === 0} style={pillBtn(C.green)}>⬇ Excel</button>
+                <button onClick={() => setView("invoice")} style={pillBtn(C.brown)}>📋 Weekly Invoice</button>
                 <button onClick={lockAndExit} style={pillBtn(C.brownSoft)}>🔒 Lock</button>
               </div>
             </div>
@@ -303,6 +326,8 @@ export default function App() {
 
       <div style={{ textAlign: "center", padding: "0 0 22px", fontSize: 12.5, color: C.brownSoft }}>
         © Arif Foods · {!unlocked && <button onClick={() => setView("pin")} style={{ border: "none", background: "transparent", color: C.brownSoft, fontSize: 12.5, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Staff sign-in</button>}
+        {" · "}
+        <button onClick={() => setView("driver")} style={{ border: "none", background: "transparent", color: C.brownSoft, fontSize: 12.5, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Driver sign-in</button>
       </div>
     </div>
   );
@@ -320,3 +345,4 @@ function Row({ k, v, bold }) {
 function Stat({ label, value, accent, big }) {
   return <div style={{ flex: big ? 1.4 : 1, minWidth: 130, background: "#FFFBF4", border: `1.5px solid ${accent}55`, borderTop: `4px solid ${accent}`, borderRadius: 14, padding: "14px 16px", textAlign: "center" }}><div style={{ fontSize: 30, fontWeight: 800, color: accent, fontFamily: "Georgia, serif" }}>{value}</div><div style={{ fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#8A6A52" }}>{label}</div></div>;
 }
+
