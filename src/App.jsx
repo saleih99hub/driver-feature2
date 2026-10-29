@@ -4,6 +4,7 @@ import {
   verifyPin,
   fetchOrders,
   deleteOrder,
+  updateOrder,
   todayStr
 } from "./supabase.js";
 import DriverView from "./DriverView";
@@ -136,9 +137,40 @@ export default function App() {
   };
 
   const removeOrder = async (id) => {
+    if (!window.confirm("Cancel this order?")) return;
     try { await deleteOrder(staffPin, id); setOrders((p) => p.filter((o) => o.id !== id)); }
     catch { setSummaryError("Could not remove that order. Refresh and try again."); }
   };
+
+  // Staff order editing
+  const [editing, setEditing] = useState(null);
+  const [editError, setEditError] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const startEdit = (o) => {
+    setEditError("");
+    setEditing({
+      id: o.id, customer: o.customer || "", phone: o.phone || "", note: o.note || "",
+      bag5white: o.bag5white || 0, bag5brown: o.bag5brown || 0,
+      bag10white: o.bag10white || 0, bag10brown: o.bag10brown || 0,
+      bag20white: o.bag20white || 0, bag20brown: o.bag20brown || 0
+    });
+  };
+  const setE = (k) => (v) => setEditing((e) => ({ ...e, [k]: v }));
+  const saveEdit = async () => {
+    setEditError("");
+    if (!editing.customer.trim()) { setEditError("Customer name is required."); return; }
+    if (injeraOf(editing) === 0) { setEditError("An order needs at least one bag. Use ✕ to cancel the order instead."); return; }
+    setEditSaving(true);
+    try {
+      await updateOrder(staffPin, editing.id, editing);
+      setOrders((p) => p.map((o) => (o.id === editing.id
+        ? { ...o, ...editing, customer: editing.customer.trim(), phone: editing.phone.trim() || null, note: editing.note.trim() || null }
+        : o)));
+      setEditing(null);
+    } catch { setEditError("Could not save the changes. Check your connection and try again."); }
+    setEditSaving(false);
+  };
+
 
   // Column totals
   const T = orders.reduce((a, o) => ({
@@ -157,7 +189,7 @@ export default function App() {
     const totalRow = ["BAKER TOTAL", "", T.b5w, T.b5b, T.b10w, T.b10b, T.b20w, T.b20b, T.inj, "", ""];
     const esc = (v) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const csv = [headers, ...rows, totalRow].map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `arif-orders-${summaryDate}.csv`;
@@ -305,7 +337,10 @@ export default function App() {
                           <td style={td()}>{o.bag10white || "—"}</td><td style={td()}>{o.bag10brown || "—"}</td>
                           <td style={td()}>{o.bag20white || "—"}</td><td style={td()}>{o.bag20brown || "—"}</td>
                           <td style={{ ...td(), fontWeight: 700 }}>{injeraOf(o)}</td>
-                          <td style={td()}><button onClick={() => removeOrder(o.id)} style={{ border: "none", background: "transparent", color: C.brownSoft, cursor: "pointer", fontSize: 16 }}>✕</button></td>
+                          <td style={{ ...td(), whiteSpace: "nowrap" }}>
+                            <button onClick={() => startEdit(o)} title="Edit order" style={{ border: "none", background: "transparent", color: C.amber, cursor: "pointer", fontSize: 16, marginRight: 6 }}>✎</button>
+                            <button onClick={() => removeOrder(o.id)} title="Cancel order" style={{ border: "none", background: "transparent", color: C.brownSoft, cursor: "pointer", fontSize: 16 }}>✕</button>
+                          </td>
                         </tr>
                       ))}
                       <tr style={{ borderTop: `2px solid ${C.red}`, background: "#FFF3E2", fontWeight: 800 }}>
@@ -319,7 +354,32 @@ export default function App() {
                   </table>
                 </div>
               )}
-            <div style={{ fontSize: 12, color: C.brownSoft, marginTop: 10 }}>W = White · B = Brown. The Excel button downloads this list as a spreadsheet you can open and print.</div>
+            {editing && (
+              <div onClick={() => !editSaving && setEditing(null)} style={{ position: "fixed", inset: 0, background: "rgba(59,35,22,0.45)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 12px", zIndex: 50 }}>
+                <div onClick={(e) => e.stopPropagation()} style={{ background: C.cream, borderRadius: 20, width: "100%", maxWidth: 480, padding: "20px 18px 22px", boxSizing: "border-box", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 21, fontWeight: 700 }}>Edit order</div>
+                  <div style={{ color: C.brownSoft, fontSize: 13.5, marginTop: 2 }}>{prettyDate(summaryDate)}</div>
+                  <label style={lbl}>Customer name *</label>
+                  <input value={editing.customer} onChange={(e) => setE("customer")(e.target.value)} style={inp} />
+                  <label style={lbl}>Phone</label>
+                  <input value={editing.phone} onChange={(e) => setE("phone")(e.target.value)} style={inp} />
+                  <div style={{ display: "grid", gap: 12, margin: "18px 0 4px" }}>
+                    <BagCard size={5} white={editing.bag5white} brown={editing.bag5brown} setWhite={setE("bag5white")} setBrown={setE("bag5brown")} accent={C.amber} />
+                    <BagCard size={10} white={editing.bag10white} brown={editing.bag10brown} setWhite={setE("bag10white")} setBrown={setE("bag10brown")} accent={C.red} />
+                    <BagCard size={20} white={editing.bag20white} brown={editing.bag20brown} setWhite={setE("bag20white")} setBrown={setE("bag20brown")} accent={C.green} />
+                  </div>
+                  <label style={lbl}>Note</label>
+                  <input value={editing.note} onChange={(e) => setE("note")(e.target.value)} style={inp} />
+                  <div style={{ background: C.amberSoft, borderRadius: 12, padding: "10px 14px", marginTop: 16, textAlign: "center", fontWeight: 700 }}>New total: {injeraOf(editing)} injera</div>
+                  {editError && <div style={{ background: "#FBE3DE", border: `1px solid ${C.red}66`, color: C.redDark, borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: 14, fontWeight: 600 }}>{editError}</div>}
+                  <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                    <button onClick={() => setEditing(null)} disabled={editSaving} style={{ ...pillBtn(C.brownSoft), flex: 1, padding: "13px 0" }}>Close</button>
+                    <button onClick={saveEdit} disabled={editSaving} style={{ flex: 2, padding: "13px 0", border: "none", borderRadius: 12, background: editSaving ? C.brownSoft : C.red, color: "#fff", fontSize: 15, fontWeight: 700, cursor: editSaving ? "wait" : "pointer" }}>{editSaving ? "Saving…" : "Save changes"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: C.brownSoft, marginTop: 10 }}>W = White · B = Brown. Tap ✎ to edit an order or ✕ to cancel it. The Excel button downloads this list as a spreadsheet you can open and print.</div>
           </>
         )}
       </div>
@@ -345,4 +405,5 @@ function Row({ k, v, bold }) {
 function Stat({ label, value, accent, big }) {
   return <div style={{ flex: big ? 1.4 : 1, minWidth: 130, background: "#FFFBF4", border: `1.5px solid ${accent}55`, borderTop: `4px solid ${accent}`, borderRadius: 14, padding: "14px 16px", textAlign: "center" }}><div style={{ fontSize: 30, fontWeight: 800, color: accent, fontFamily: "Georgia, serif" }}>{value}</div><div style={{ fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#8A6A52" }}>{label}</div></div>;
 }
+
 
