@@ -67,3 +67,14 @@ export async function updateOrder(pin, id, o) {
   });
   if (error) throw error;
 }
+export async function addOrder(pin, date, o) {
+  const { error } = await supabase.rpc("add_order", {
+    pin, p_date: date,
+    p_customer: o.customer, p_phone: o.phone || "",
+    p_bag5white: o.bag5white, p_bag5brown: o.bag5brown,
+    p_bag10white: o.bag10white, p_bag10brown: o.bag10brown,
+    p_bag20white: o.bag20white, p_bag20brown: o.bag20brown,
+    p_note: o.note || ""
+  });
+  if (error) throw error;
+}
