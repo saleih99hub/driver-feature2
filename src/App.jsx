@@ -5,6 +5,7 @@ import {
   fetchOrders,
   deleteOrder,
   updateOrder,
+  addOrder,
   todayStr
 } from "./supabase.js";
 import DriverView from "./DriverView";
@@ -146,6 +147,10 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [editError, setEditError] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const startAdd = () => {
+    setEditError("");
+    setEditing({ id: null, customer: "", phone: "", note: "", bag5white: 0, bag5brown: 0, bag10white: 0, bag10brown: 0, bag20white: 0, bag20brown: 0 });
+  };
   const startEdit = (o) => {
     setEditError("");
     setEditing({
@@ -162,11 +167,17 @@ export default function App() {
     if (injeraOf(editing) === 0) { setEditError("An order needs at least one bag. Use ✕ to cancel the order instead."); return; }
     setEditSaving(true);
     try {
-      await updateOrder(staffPin, editing.id, editing);
-      setOrders((p) => p.map((o) => (o.id === editing.id
-        ? { ...o, ...editing, customer: editing.customer.trim(), phone: editing.phone.trim() || null, note: editing.note.trim() || null }
-        : o)));
-      setEditing(null);
+      if (editing.id == null) {
+        await addOrder(staffPin, summaryDate, editing);
+        setEditing(null);
+        refresh(summaryDate, staffPin);
+      } else {
+        await updateOrder(staffPin, editing.id, editing);
+        setOrders((p) => p.map((o) => (o.id === editing.id
+          ? { ...o, ...editing, customer: editing.customer.trim(), phone: editing.phone.trim() || null, note: editing.note.trim() || null }
+          : o)));
+        setEditing(null);
+      }
     } catch { setEditError("Could not save the changes. Check your connection and try again."); }
     setEditSaving(false);
   };
@@ -297,6 +308,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <input type="date" value={summaryDate} onChange={(e) => setSummaryDate(e.target.value)} style={{ ...inp, width: "auto", margin: 0, padding: "9px 12px", fontSize: 15 }} />
                 <button onClick={() => refresh(summaryDate, staffPin)} title="Refresh" style={pillBtn(C.amber)}>↻</button>
+                <button onClick={startAdd} style={pillBtn(C.red)}>＋ Add order</button>
                 <button onClick={exportExcel} disabled={orders.length === 0} style={pillBtn(C.green)}>⬇ Excel</button>
                 <button onClick={() => setView("invoice")} style={pillBtn(C.brown)}>📋 Weekly Invoice</button>
                 <button onClick={lockAndExit} style={pillBtn(C.brownSoft)}>🔒 Lock</button>
@@ -357,7 +369,7 @@ export default function App() {
             {editing && (
               <div onClick={() => !editSaving && setEditing(null)} style={{ position: "fixed", inset: 0, background: "rgba(59,35,22,0.45)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 12px", zIndex: 50 }}>
                 <div onClick={(e) => e.stopPropagation()} style={{ background: C.cream, borderRadius: 20, width: "100%", maxWidth: 480, padding: "20px 18px 22px", boxSizing: "border-box", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: 21, fontWeight: 700 }}>Edit order</div>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 21, fontWeight: 700 }}>{editing.id == null ? "Add order" : "Edit order"}</div>
                   <div style={{ color: C.brownSoft, fontSize: 13.5, marginTop: 2 }}>{prettyDate(summaryDate)}</div>
                   <label style={lbl}>Customer name *</label>
                   <input value={editing.customer} onChange={(e) => setE("customer")(e.target.value)} style={inp} />
@@ -374,7 +386,7 @@ export default function App() {
                   {editError && <div style={{ background: "#FBE3DE", border: `1px solid ${C.red}66`, color: C.redDark, borderRadius: 12, padding: "10px 14px", marginTop: 12, fontSize: 14, fontWeight: 600 }}>{editError}</div>}
                   <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                     <button onClick={() => setEditing(null)} disabled={editSaving} style={{ ...pillBtn(C.brownSoft), flex: 1, padding: "13px 0" }}>Close</button>
-                    <button onClick={saveEdit} disabled={editSaving} style={{ flex: 2, padding: "13px 0", border: "none", borderRadius: 12, background: editSaving ? C.brownSoft : C.red, color: "#fff", fontSize: 15, fontWeight: 700, cursor: editSaving ? "wait" : "pointer" }}>{editSaving ? "Saving…" : "Save changes"}</button>
+                    <button onClick={saveEdit} disabled={editSaving} style={{ flex: 2, padding: "13px 0", border: "none", borderRadius: 12, background: editSaving ? C.brownSoft : C.red, color: "#fff", fontSize: 15, fontWeight: 700, cursor: editSaving ? "wait" : "pointer" }}>{editSaving ? "Saving…" : editing.id == null ? "Add order" : "Save changes"}</button>
                   </div>
                 </div>
               </div>
@@ -405,5 +417,6 @@ function Row({ k, v, bold }) {
 function Stat({ label, value, accent, big }) {
   return <div style={{ flex: big ? 1.4 : 1, minWidth: 130, background: "#FFFBF4", border: `1.5px solid ${accent}55`, borderTop: `4px solid ${accent}`, borderRadius: 14, padding: "14px 16px", textAlign: "center" }}><div style={{ fontSize: 30, fontWeight: 800, color: accent, fontFamily: "Georgia, serif" }}>{value}</div><div style={{ fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#8A6A52" }}>{label}</div></div>;
 }
+
 
 
