@@ -78,3 +78,41 @@ export async function addOrder(pin, date, o) {
   });
   if (error) throw error;
 }
+
+// ---- Customers and regions (staff PIN required) ----
+export async function getCustomers(pin) {
+  const { data, error } = await supabase.rpc("staff_get_customers", { pin });
+  if (error) throw error;
+  return data ?? [];
+}
+ 
+export async function saveCustomer(pin, id, name, phone, region) {
+  const { data, error } = await supabase.rpc("staff_save_customer", {
+    pin, p_id: id, p_name: name, p_phone: phone || "", p_region: region
+  });
+  if (error) throw error;
+  return data;
+}
+ 
+export async function linkName(pin, name, customerId) {
+  const { error } = await supabase.rpc("staff_link_name", { pin, p_name: name, p_customer_id: customerId });
+  if (error) throw error;
+}
+ 
+export async function getUnlinkedNames(pin) {
+  const { data, error } = await supabase.rpc("staff_unlinked_names", { pin });
+  if (error) throw error;
+  return data ?? [];
+}
+ 
+export async function getDrivers(pin) {
+  const { data, error } = await supabase.rpc("staff_get_drivers", { pin });
+  if (error) throw error;
+  return data ?? [];
+}
+ 
+export async function setDriverRegion(pin, id, region) {
+  const { error } = await supabase.rpc("staff_set_driver_region", { pin, p_id: id, p_region: region });
+  if (error) throw error;
+}
+ 
