@@ -115,4 +115,29 @@ export async function setDriverRegion(pin, id, region) {
   const { error } = await supabase.rpc("staff_set_driver_region", { pin, p_id: id, p_region: region });
   if (error) throw error;
 }
- 
+
+// ---- Store order links ----
+export async function getStoreByCode(code) {
+  const { data, error } = await supabase.rpc("get_store_by_code", { p_code: code });
+  if (error) throw error;
+  return data || null;
+}
+
+export async function submitStoreOrder(code, o) {
+  const { data, error } = await supabase.rpc("submit_store_order", {
+    p_code: code,
+    p_date: todayStr(),
+    p_bag5white: o.bag5white, p_bag5brown: o.bag5brown,
+    p_bag10white: o.bag10white, p_bag10brown: o.bag10brown,
+    p_bag20white: o.bag20white, p_bag20brown: o.bag20brown,
+    p_note: o.note || ""
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getStoreOrders(code) {
+  const { data, error } = await supabase.rpc("get_store_orders", { p_code: code });
+  if (error) throw error;
+  return data ?? [];
+} 
