@@ -51,6 +51,18 @@ export default function CustomersAdmin({ pin, onBack }) {
   const [linkChoice, setLinkChoice] = useState({});
   const [newName, setNewName] = useState("");
   const [newRegion, setNewRegion] = useState("North");
+  const [copied, setCopied] = useState("");
+
+  const linkFor = (c) => `${window.location.origin}/?store=${c.code}`;
+  const shareLink = async (c) => {
+    const url = linkFor(c);
+    const text = `Arif Foods order link for ${c.name}. Open it each night to place your order, or save it to your home screen:`;
+    try {
+      if (navigator.share) { await navigator.share({ title: "Arif Foods order link", text, url }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); setCopied(c.id); setTimeout(() => setCopied(""), 2500); }
+    catch { window.prompt("Copy this link:", url); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -154,7 +166,14 @@ export default function CustomersAdmin({ pin, onBack }) {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customers" style={{ ...inp, width: "100%", marginBottom: 6 }} />
               {shown.map((c) => (
                 <div key={c.id} style={row}>
-                  <div style={{ fontWeight: 700, color: c.region ? C.brown : C.red }}>{c.name}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, color: c.region ? C.brown : C.red }}>{c.name}</div>
+                    {c.code && (
+                      <button onClick={() => shareLink(c)} style={{ marginTop: 4, border: "none", background: "transparent", color: C.amber, fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+                        {copied === c.id ? "✓ Link copied" : `🔗 Share order link · ${c.code}`}
+                      </button>
+                    )}
+                  </div>
                   <RegionPicker value={c.region} disabled={busy === `c-${c.id}`} onChange={(r) => setRegion(c, r)} />
                 </div>
               ))}
