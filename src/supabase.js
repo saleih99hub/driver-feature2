@@ -136,6 +136,16 @@ export async function submitStoreOrder(code, o) {
   return data;
 }
 
+// Store's own orders for a date range (up to ~3 months), with the same
+// ordered / delivered / returned / net math as the weekly invoice
+export async function getStoreHistory(code, start, end) {
+  const { data, error } = await supabase.rpc("get_store_history", {
+    p_code: code, p_start: start, p_end: end
+  });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getStoreOrders(code) {
   const { data, error } = await supabase.rpc("get_store_orders", { p_code: code });
   if (error) throw error;
