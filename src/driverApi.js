@@ -38,3 +38,24 @@ export async function getWeeklyInvoice(pin, startDate, endDate) {
   if (error) throw error
   return data || []
 }
+
+// Standard price per injera, stored in app_settings
+export async function getInvoiceRate(pin) {
+  const { data, error } = await supabase.rpc('get_invoice_rate', { pin })
+  if (error) throw error
+  return data
+}
+
+export async function setInvoiceRate(pin, rate) {
+  const { data, error } = await supabase.rpc('set_invoice_rate', { pin, p_rate: rate })
+  if (error) throw error
+  return data
+}
+
+// Every store on the driver's route for a date, in stop order, with that day's orders.
+// Stores with no order come back once with order_id = null.
+export async function getRouteSheet(pin, date) {
+  const { data, error } = await supabase.rpc('get_route_sheet', { pin, p_date: date })
+  if (error) throw error
+  return data || []
+}
